@@ -1,0 +1,106 @@
+#include <windows.h>
+
+#include <string>
+const int BUTTON_ID = 1;
+int totalEnt = 0;
+HWND txt;
+LRESULT CALLBACK WindowProc(
+    HWND hwnd,
+    UINT uMsg,
+    WPARAM wParam,
+    LPARAM lParam
+) {
+    switch (uMsg) {
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
+        case WM_COMMAND:
+            if (HIWORD(wParam) == BN_CLICKED){
+                if(LOWORD(wParam) == BUTTON_ID){
+                    totalEnt += 1;
+                    SetWindowTextA(txt,std::to_string(totalEnt).c_str());
+                    std::string ss = "Total Entires:" + std::to_string(totalEnt);
+                    MessageBoxA(hwnd, ss.c_str(), "My Tracker", MB_OK);
+                    
+                    
+                }
+            }
+    }
+
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+
+int WINAPI WinMain(
+    HINSTANCE hInstance,
+    HINSTANCE,
+    LPSTR,
+    int nCmdShow
+) {
+    const char CLASS_NAME[] = "MyTrackerWindow";
+
+    WNDCLASSA wc{};
+    wc.lpfnWndProc = WindowProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = CLASS_NAME;
+
+    RegisterClassA(&wc);
+
+    HWND hwnd = CreateWindowExA(
+        0,
+        CLASS_NAME,
+        "I am still alive",
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        800,
+        600,
+        nullptr,
+        nullptr,
+        hInstance,
+        nullptr
+    );
+    HWND button = CreateWindowExA(
+        0,
+        "BUTTON",
+        "GG",
+        WS_CHILD | WS_VISIBLE,
+        10,
+        10,
+        100,
+        100,
+        hwnd,
+        (HMENU)BUTTON_ID,
+        hInstance,
+        nullptr  
+    );
+    txt = CreateWindowExA(
+        0,
+        "STATIC",
+        std::to_string(totalEnt).c_str(),
+        WS_CHILD | WS_VISIBLE,  
+        90,
+        180,
+        100,
+        100,
+        hwnd,
+        nullptr,
+        hInstance,
+        nullptr    
+    );
+
+    if (hwnd == nullptr) {
+        return 0;
+    }
+
+    ShowWindow(hwnd, nCmdShow);
+
+    MSG msg{};
+
+    while (GetMessageA(&msg, nullptr, 0, 0) > 0) {
+        TranslateMessage(&msg);
+        DispatchMessageA(&msg);
+    }
+
+    return 0;
+}
