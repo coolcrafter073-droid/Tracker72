@@ -24,9 +24,10 @@ LRESULT CALLBACK WindowProc(
             if (HIWORD(wParam) == BN_CLICKED){
                 if(LOWORD(wParam) == BUTTON_ID){
                     totalEnt += 1;
+                    Entry entry = {"Entry", std::to_string(totalEnt)};
+                    V.push_back(entry);
                     SetWindowTextA(txt,std::to_string(totalEnt).c_str());
-                    std::string ss = "Total Entires:" + std::to_string(totalEnt);
-                    MessageBoxA(hwnd, ss.c_str(), "My Tracker", MB_OK);
+                    MessageBoxA(hwnd, std::to_string(V.size()).c_str(), "U got msg", MB_OK);
                     
                     
                 }
