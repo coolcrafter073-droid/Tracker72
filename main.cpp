@@ -2,14 +2,13 @@
 #include <vector>
 #include <string>
 const int BUTTON_ID = 1;
-int totalEnt = 0;
 HWND txt;
 struct Entry{
     std::string title;
     std::string description;
 };
 std::vector<Entry> V = {};
-Entry first = {"first ent", "YOOOOOO"};
+
 LRESULT CALLBACK WindowProc(
     HWND hwnd,
     UINT uMsg,
@@ -23,10 +22,9 @@ LRESULT CALLBACK WindowProc(
         case WM_COMMAND:
             if (HIWORD(wParam) == BN_CLICKED){
                 if(LOWORD(wParam) == BUTTON_ID){
-                    totalEnt += 1;
-                    Entry entry = {"Entry", std::to_string(totalEnt)};
+                    Entry entry = {"Entry", std::to_string(V.size())};
                     V.push_back(entry);
-                    SetWindowTextA(txt,std::to_string(totalEnt).c_str());
+                    SetWindowTextA(txt,std::to_string(V.size()).c_str());
                     MessageBoxA(hwnd, std::to_string(V.size()).c_str(), "U got msg", MB_OK);
                     
                     
@@ -84,7 +82,7 @@ int WINAPI WinMain(
     txt = CreateWindowExA(
         0,
         "STATIC",
-        std::to_string(totalEnt).c_str(),
+        std::to_string(V.size()).c_str(),
         WS_CHILD | WS_VISIBLE,  
         90,
         180,
