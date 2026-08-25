@@ -3,6 +3,7 @@
 #include <string>
 const int BUTTON_ID = 1;
 HWND txt;
+HWND edt;
 struct Entry{
     std::string title;
     std::string description;
@@ -24,6 +25,9 @@ LRESULT CALLBACK WindowProc(
                 if(LOWORD(wParam) == BUTTON_ID){
                     Entry entry = {"Entry", std::to_string(V.size())};
                     V.push_back(entry);
+                    TCHAR buff[1024] = {0};
+                    GetWindowTextA(edt , buff ,1024);
+                    V[V.size() - 1].title = buff;
                     SetWindowTextA(txt,std::to_string(V.size()).c_str());
                     MessageBoxA(hwnd, std::to_string(V.size()).c_str(), "U got msg", MB_OK);
                     
@@ -93,10 +97,10 @@ int WINAPI WinMain(
         hInstance,
         nullptr    
     );
-    HWND edt = CreateWindowExA(
+    edt = CreateWindowExA(
         0,
         "EDIT",
-        "Something to edit",
+        "",
         WS_BORDER | WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL,
         300,
         300,
