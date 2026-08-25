@@ -93,6 +93,20 @@ int WINAPI WinMain(
         hInstance,
         nullptr    
     );
+    HWND edt = CreateWindowExA(
+        0,
+        "EDIT",
+        "Something to edit",
+        WS_BORDER | WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL,
+        300,
+        300,
+        100,
+        200,
+        hwnd,
+        nullptr,
+        hInstance,
+        nullptr 
+    );
 
     if (hwnd == nullptr) {
         return 0;
