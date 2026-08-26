@@ -23,22 +23,27 @@ LRESULT CALLBACK WindowProc(
         case WM_COMMAND:
             if (HIWORD(wParam) == BN_CLICKED){
                 if(LOWORD(wParam) == BUTTON_ID){
-                    Entry entry = {"Entry", std::to_string(V.size())};
-                    V.push_back(entry);
-                    TCHAR buff[1024] = {0};
+                    char buff[1024] = {};
                     GetWindowTextA(edt , buff ,1024);
-                    V[V.size() - 1].title = buff;
-                    SetWindowTextA(txt,std::to_string(V.size()).c_str());
-                    MessageBoxA(hwnd, std::to_string(V.size()).c_str(), "U got msg", MB_OK);
+                    if (buff[0] == '\0'){
+                        MessageBoxA(hwnd, "Cannot create empty Entries", "U got msg", MB_OK);
+                    }
+                    else
+                    {
+                        Entry entry = {buff, "This is entry number " + std::to_string(V.size() + 1)};
+                        V.push_back(entry);
+                        SetWindowTextA(txt,std::to_string(V.size()).c_str());
+                        MessageBoxA(hwnd, std::to_string(V.size()).c_str(), "U got msg", MB_OK);
+                    };
                     
-                    
+
                 }
             }
     }
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
-
+ 
 
 int WINAPI WinMain(
     HINSTANCE hInstance,
