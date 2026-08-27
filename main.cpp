@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <vector>
 #include <string>
+#include <algorithm>
 const int BUTTON_ID = 1;
 HWND txt;
 HWND edt;
@@ -25,7 +26,11 @@ LRESULT CALLBACK WindowProc(
                 if(LOWORD(wParam) == BUTTON_ID){
                     char buff[1024] = {};
                     GetWindowTextA(edt , buff ,1024);
-                    if (buff[0] == '\0'){
+                    bool all_space = std::all_of(buff, buff + std::strlen(buff), [](char s){
+                        return s == ' ';
+                    });
+
+                    if (buff[0] == '\0' || all_space){
                         MessageBoxA(hwnd, "Cannot create empty Entries", "U got msg", MB_OK);
                     }
                     else
