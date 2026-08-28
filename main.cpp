@@ -5,6 +5,7 @@
 const int BUTTON_ID = 1;
 HWND txt;
 HWND edt;
+HWND txt_mass;
 struct Entry{
     std::string title;
     std::string description;
@@ -37,6 +38,11 @@ LRESULT CALLBACK WindowProc(
                     {
                         Entry entry = {buff, "This is entry number " + std::to_string(V.size() + 1)};
                         V.push_back(entry);
+                        std::string inf_display = "Current Entries:\n";
+                        for (int i = 0; i < V.size(); i++){
+                            inf_display += V[i].title + "\n";
+                        };
+                        SetWindowTextA(txt_mass, inf_display.c_str());
                         SetWindowTextA(txt,std::to_string(V.size()).c_str());
                         MessageBoxA(hwnd, std::to_string(V.size()).c_str(), "U got msg", MB_OK);
                     };
@@ -107,15 +113,29 @@ int WINAPI WinMain(
         hInstance,
         nullptr    
     );
+        txt_mass = CreateWindowExA(
+        0,
+        "STATIC",
+        "Write something",
+        WS_CHILD | WS_VISIBLE,  
+        450,
+        350,
+        300,
+        150,
+        hwnd,
+        nullptr,
+        hInstance,
+        nullptr    
+    );
     edt = CreateWindowExA(
         0,
         "EDIT",
         "",
         WS_BORDER | WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL,
-        300,
-        300,
+        450,
         100,
-        200,
+        300,
+        150,
         hwnd,
         nullptr,
         hInstance,
