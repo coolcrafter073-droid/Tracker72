@@ -3,9 +3,12 @@
 #include <string>
 #include <algorithm>
 const int BUTTON_ID = 1;
+const int BUTTON_ID_SHOW = 2;
 HWND txt;
 HWND edt;
 HWND txt_mass;
+HWND edt_sec;
+HWND lst;
 struct Entry{
     std::string title;
     std::string description;
@@ -27,27 +30,39 @@ LRESULT CALLBACK WindowProc(
                 if(LOWORD(wParam) == BUTTON_ID){
                     char buff[1024] = {};
                     GetWindowTextA(edt , buff ,1024);
+                    char buff2[1024] = {};
+                    GetWindowTextA(edt_sec , buff2 ,1024);
                     bool all_space = std::all_of(buff, buff + std::strlen(buff), [](char s){
                         return s == ' ';
                     });
-
-                    if (buff[0] == '\0' || all_space){
+                    bool all_space2 = std::all_of(buff2, buff2 + std::strlen(buff2), [](char s){
+                        return s == ' ';
+                    });
+                    if (buff2[0] == '\0' || all_space2 || buff[0] == '\0' || all_space){
                         MessageBoxA(hwnd, "Cannot create empty Entries", "U got msg", MB_OK);
                     }
                     else
                     {
-                        Entry entry = {buff, "This is entry number " + std::to_string(V.size() + 1)};
+                        Entry entry = {buff, buff2};
                         V.push_back(entry);
+                        SendMessageA(lst, LB_ADDSTRING, 0 , (LPARAM) entry.title.c_str());
                         std::string inf_display = "Current Entries:\n";
                         for (int i = 0; i < V.size(); i++){
-                            inf_display += V[i].title + "\n";
+                            inf_display += "* " + V[i].title + "\n" + V[i].description + "\n";
                         };
                         SetWindowTextA(txt_mass, inf_display.c_str());
+                        SetWindowTextA(edt, "");
+                        SetWindowTextA(edt_sec, "");
                         SetWindowTextA(txt,std::to_string(V.size()).c_str());
                         MessageBoxA(hwnd, std::to_string(V.size()).c_str(), "U got msg", MB_OK);
                     };
                     
 
+                }
+                if(LOWORD(wParam) == BUTTON_ID_SHOW){
+                   int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
+                   SetWindowTextA(txt_mass, V[index].description.c_str());
+                   
                 }
             }
     }
@@ -91,11 +106,25 @@ int WINAPI WinMain(
         "GG",
         WS_CHILD | WS_VISIBLE,
         10,
-        10,
+        400,
         100,
         100,
         hwnd,
         (HMENU)BUTTON_ID,
+        hInstance,
+        nullptr  
+    );
+    HWND show = CreateWindowExA(
+        0,
+        "BUTTON",
+        "show",
+        WS_CHILD | WS_VISIBLE,
+        10,
+        10,
+        100,
+        100,
+        hwnd,
+        (HMENU)BUTTON_ID_SHOW,
         hInstance,
         nullptr  
     );
@@ -113,7 +142,7 @@ int WINAPI WinMain(
         hInstance,
         nullptr    
     );
-        txt_mass = CreateWindowExA(
+    txt_mass = CreateWindowExA(
         0,
         "STATIC",
         "Write something",
@@ -133,9 +162,37 @@ int WINAPI WinMain(
         "",
         WS_BORDER | WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL,
         450,
+        10,
+        300,
+        50,
+        hwnd,
+        nullptr,
+        hInstance,
+        nullptr 
+    );
+    edt_sec = CreateWindowExA(
+        0,
+        "EDIT",
+        "",
+        WS_BORDER | WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL,
+        450,
         100,
         300,
         150,
+        hwnd,
+        nullptr,
+        hInstance,
+        nullptr 
+    );
+    lst = CreateWindowExA(
+        0,
+        "LISTBOX",
+        "",
+        WS_BORDER | WS_CHILD | WS_VISIBLE | WS_VSCROLL ,
+        170,
+        100,
+        200,
+        110,
         hwnd,
         nullptr,
         hInstance,
