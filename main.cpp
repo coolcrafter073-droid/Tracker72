@@ -4,6 +4,7 @@
 #include <algorithm>
 const int BUTTON_ID = 1;
 const int BUTTON_ID_SHOW = 2;
+const int BUTTON_ID_DELETE = 3;
 HWND txt;
 HWND edt;
 HWND txt_mass;
@@ -61,7 +62,31 @@ LRESULT CALLBACK WindowProc(
                 }
                 if(LOWORD(wParam) == BUTTON_ID_SHOW){
                    int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
-                   SetWindowTextA(txt_mass, V[index].description.c_str());
+                   if (index == LB_ERR){
+                    MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
+                   }
+                   else {
+                    SetWindowTextA(txt_mass, V[index].description.c_str()); 
+                   }
+                   
+                   
+                }
+                if(LOWORD(wParam) == BUTTON_ID_DELETE){
+                   int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
+                   if (index == LB_ERR){
+                    MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
+                   }
+                   else {
+                    SendMessage(lst, LB_DELETESTRING, index , 0);
+                    V.erase(V.begin() + index);
+                    SetWindowTextA(txt,std::to_string(V.size()).c_str());
+                    std::string inf_display = "Current Entries:\n";
+                        for (int i = 0; i < V.size(); i++){
+                            inf_display += "* " + V[i].title + "\n" + V[i].description + "\n";
+                        };
+                        SetWindowTextA(txt_mass, inf_display.c_str());
+                   }
+                   
                    
                 }
             }
@@ -103,7 +128,7 @@ int WINAPI WinMain(
     HWND button = CreateWindowExA(
         0,
         "BUTTON",
-        "GG",
+        "add",
         WS_CHILD | WS_VISIBLE,
         10,
         400,
@@ -125,6 +150,20 @@ int WINAPI WinMain(
         100,
         hwnd,
         (HMENU)BUTTON_ID_SHOW,
+        hInstance,
+        nullptr  
+    );
+    HWND del = CreateWindowExA(
+        0,
+        "BUTTON",
+        "delete",
+        WS_CHILD | WS_VISIBLE,
+        10,
+        100,
+        100,
+        100,
+        hwnd,
+        (HMENU)BUTTON_ID_DELETE,
         hInstance,
         nullptr  
     );
