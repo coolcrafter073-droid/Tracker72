@@ -5,6 +5,8 @@
 const int BUTTON_ID = 1;
 const int BUTTON_ID_SHOW = 2;
 const int BUTTON_ID_DELETE = 3;
+const int BUTTON_ID_EDIT = 4;
+const int BUTTON_ID_SAVE = 5;
 HWND txt;
 HWND edt;
 HWND txt_mass;
@@ -89,6 +91,34 @@ LRESULT CALLBACK WindowProc(
                    
                    
                 }
+                if(LOWORD(wParam) == BUTTON_ID_EDIT){
+                   int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
+                   if (index == LB_ERR){
+                    MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
+                   }
+                   else {
+                    SetWindowTextA(edt_sec, V[index].description.c_str()); 
+                    SetWindowTextA(edt, V[index].title.c_str()); 
+                   }
+                   
+                   
+                }
+                if(LOWORD(wParam) == BUTTON_ID_SAVE){
+                    int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
+                   if (index == LB_ERR){
+                    MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
+                   }
+                   else {
+                        SendMessage(lst, LB_DELETESTRING, index, 0);
+                        char new_title[1024] = {};
+                        char new_description[1024] = {};
+                        GetWindowTextA(edt_sec , new_description ,1024);
+                        GetWindowTextA(edt , new_title ,1024);
+                        V[index].title = new_title;
+                        V[index].description = new_description;
+                        SendMessageA(lst, LB_INSERTSTRING, index , (LPARAM) V[index].title.c_str());
+                     }
+                }
             }
     }
 
@@ -153,6 +183,20 @@ int WINAPI WinMain(
         hInstance,
         nullptr  
     );
+    HWND edit = CreateWindowExA(
+        0,
+        "BUTTON",
+        "edit",
+        WS_CHILD | WS_VISIBLE,
+        10,
+        200,
+        100,
+        100,
+        hwnd,
+        (HMENU)BUTTON_ID_EDIT,
+        hInstance,
+        nullptr  
+    );   
     HWND del = CreateWindowExA(
         0,
         "BUTTON",
@@ -167,6 +211,20 @@ int WINAPI WinMain(
         hInstance,
         nullptr  
     );
+    HWND save = CreateWindowExA(
+        0,
+        "BUTTON",
+        "save",
+        WS_CHILD | WS_VISIBLE,
+        10,
+        300,
+        100,
+        100,
+        hwnd,
+        (HMENU)BUTTON_ID_SAVE,
+        hInstance,
+        nullptr  
+    ); 
     txt = CreateWindowExA(
         0,
         "STATIC",
