@@ -2,6 +2,8 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <iostream>
+#include "sqlite3.h"
 const int BUTTON_ID = 1;
 const int BUTTON_ID_SHOW = 2;
 const int BUTTON_ID_DELETE = 3;
@@ -17,7 +19,18 @@ struct Entry{
     std::string description;
 };
 std::vector<Entry> V = {};
-
+int callback(void* data, int argc, char** argv, char** azColName){
+        std::vector<Entry>* vec = static_cast<std::vector<Entry>*>(data);
+        std::string s = "";
+        Entry test_entry;
+        test_entry.title = argv[1];
+        test_entry.description = argv[2];
+        vec->push_back(test_entry);
+        for (int i = 0; i < argc; i++){
+            s += argv[i];
+        }   
+        return 0;
+    }
 LRESULT CALLBACK WindowProc(
     HWND hwnd,
     UINT uMsg,
@@ -53,11 +66,12 @@ LRESULT CALLBACK WindowProc(
                         for (int i = 0; i < V.size(); i++){
                             inf_display += "* " + V[i].title + "\n" + V[i].description + "\n";
                         };
+                        std::string count_display = "Total Entries:\n " + std::to_string(V.size());
                         SetWindowTextA(txt_mass, inf_display.c_str());
                         SetWindowTextA(edt, "");
                         SetWindowTextA(edt_sec, "");
-                        SetWindowTextA(txt,std::to_string(V.size()).c_str());
-                        MessageBoxA(hwnd, std::to_string(V.size()).c_str(), "U got msg", MB_OK);
+                        SetWindowTextA(txt,count_display.c_str());
+                        std::cout << count_display;
                     };
                     
 
@@ -117,6 +131,11 @@ LRESULT CALLBACK WindowProc(
                         V[index].title = new_title;
                         V[index].description = new_description;
                         SendMessageA(lst, LB_INSERTSTRING, index , (LPARAM) V[index].title.c_str());
+                        std::string inf_display = "Current Entries:\n";
+                        for (int i = 0; i < V.size(); i++){
+                            inf_display += "* " + V[i].title + "\n" + V[i].description + "\n";
+                        };
+                        SetWindowTextA(txt_mass, inf_display.c_str());
                      }
                 }
             }
@@ -127,13 +146,16 @@ LRESULT CALLBACK WindowProc(
  
 
 int WINAPI WinMain(
+    
     HINSTANCE hInstance,
     HINSTANCE,
     LPSTR,
     int nCmdShow
 ) {
+    sqlite3* db;
     const char CLASS_NAME[] = "MyTrackerWindow";
-
+    int callback(void*, int, char**, char**);
+    
     WNDCLASSA wc{};
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = hInstance;
@@ -155,6 +177,8 @@ int WINAPI WinMain(
         hInstance,
         nullptr
     );
+
+
     HWND button = CreateWindowExA(
         0,
         "BUTTON",
@@ -228,12 +252,12 @@ int WINAPI WinMain(
     txt = CreateWindowExA(
         0,
         "STATIC",
-        std::to_string(V.size()).c_str(),
+        "No Entries Currently",
         WS_CHILD | WS_VISIBLE,  
-        90,
-        180,
-        100,
-        100,
+        170,
+        350,
+        200,
+        120,
         hwnd,
         nullptr,
         hInstance,
@@ -289,13 +313,28 @@ int WINAPI WinMain(
         170,
         100,
         200,
-        110,
+        170,
         hwnd,
         nullptr,
         hInstance,
         nullptr 
     );
-
+    int rc = sqlite3_open("tracker.db", &db);
+    if (rc != SQLITE_OK){
+        std::string s = sqlite3_errmsg(db);
+        MessageBoxA(hwnd, s.c_str(), "U got msg", MB_OK);
+    }
+    char *sql = "CREATE TABLE IF NOT EXISTS Entries(id INTEGER PRIMARY KEY, title TEXT, description TEXT); SELECT * FROM Entries; INSERT INTO Entries (title, description) VALUES ('Test', 'Hello from SQLite');";
+    rc = sqlite3_exec(db, sql , callback, &V, 0);
+    
+    if (rc != SQLITE_OK){
+        std::string s = sqlite3_errmsg(db);
+        MessageBoxA(hwnd, s.c_str(), "U got msg", MB_OK);
+    }
+    for (int i = 0; i < V.size(); i++){
+        SendMessageA(lst, LB_ADDSTRING, 0 , (LPARAM) V[i].title.c_str()); 
+    };
+        
     if (hwnd == nullptr) {
         return 0;
     }
@@ -308,6 +347,6 @@ int WINAPI WinMain(
         TranslateMessage(&msg);
         DispatchMessageA(&msg);
     }
-
+    sqlite3_close(db);
     return 0;
 }
