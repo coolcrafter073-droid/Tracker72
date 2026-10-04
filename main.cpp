@@ -63,6 +63,7 @@ LRESULT CALLBACK WindowProc(
                     sqlite3_bind_text(stmt, 1, buff, -1 , SQLITE_TRANSIENT );
                     sqlite3_bind_text(stmt, 2, buff, -1 , SQLITE_TRANSIENT );
                     int rc = sqlite3_step(stmt);
+                    sqlite3_finalize(stmt);
                     if (rc == SQLITE_DONE){
                         id = sqlite3_last_insert_rowid(db);
                     }
@@ -124,6 +125,7 @@ LRESULT CALLBACK WindowProc(
                     );  
                     sqlite3_bind_int(stmt, 1, V[index].id);
                     int rc = sqlite3_step(stmt);
+                    sqlite3_finalize(stmt);
                     V.erase(V.begin() + index);
                     SetWindowTextA(txt,std::to_string(V.size()).c_str());
                     std::string inf_display = "Current Entries:\n";
@@ -160,6 +162,19 @@ LRESULT CALLBACK WindowProc(
                         GetWindowTextA(edt , new_title ,1024);
                         V[index].title = new_title;
                         V[index].description = new_description;
+                        sqlite3_stmt* stmt = nullptr;
+                        sqlite3_prepare_v2(
+                            db,
+                            "UPDATE Entries SET title = ? , description = ? WHERE id = ?",
+                            -1,
+                            &stmt,
+                            nullptr
+                        );  
+                        sqlite3_bind_text(stmt, 1, new_title, -1 , SQLITE_TRANSIENT );
+                        sqlite3_bind_text(stmt, 2, new_description, -1 , SQLITE_TRANSIENT );
+                        sqlite3_bind_int(stmt, 3, V[index].id);
+                        int rc = sqlite3_step(stmt);
+                        sqlite3_finalize(stmt);
                         SendMessageA(lst, LB_INSERTSTRING, index , (LPARAM) V[index].title.c_str());
                         std::string inf_display = "Current Entries:\n";
                         for (int i = 0; i < V.size(); i++){
