@@ -8,13 +8,15 @@ const int BUTTON_ID = 1;
 const int BUTTON_ID_SHOW = 2;
 const int BUTTON_ID_DELETE = 3;
 const int BUTTON_ID_EDIT = 4;
-const int BUTTON_ID_SAVE = 5;
+const int BUTTON_ID_SAVE = 5; 
+sqlite3* db;
 HWND txt;
 HWND edt;
 HWND txt_mass;
 HWND edt_sec;
 HWND lst;
 struct Entry{
+    int id;
     std::string title;
     std::string description;
 };
@@ -23,6 +25,7 @@ int callback(void* data, int argc, char** argv, char** azColName){
         std::vector<Entry>* vec = static_cast<std::vector<Entry>*>(data);
         std::string s = "";
         Entry test_entry;
+        test_entry.id = std::stoi(argv[0]);
         test_entry.title = argv[1];
         test_entry.description = argv[2];
         vec->push_back(test_entry);
@@ -48,6 +51,21 @@ LRESULT CALLBACK WindowProc(
                     GetWindowTextA(edt , buff ,1024);
                     char buff2[1024] = {};
                     GetWindowTextA(edt_sec , buff2 ,1024);
+                    sqlite3_stmt* stmt = nullptr;
+                    int id = 0;
+                    sqlite3_prepare_v2(
+                        db,
+                        "INSERT INTO Entries (title, description) VALUES (?,?);",
+                        -1,
+                        &stmt,
+                        nullptr
+                    ); 
+                    sqlite3_bind_text(stmt, 1, buff, -1 , SQLITE_TRANSIENT );
+                    sqlite3_bind_text(stmt, 2, buff, -1 , SQLITE_TRANSIENT );
+                    int rc = sqlite3_step(stmt);
+                    if (rc == SQLITE_DONE){
+                        id = sqlite3_last_insert_rowid(db);
+                    }
                     bool all_space = std::all_of(buff, buff + std::strlen(buff), [](char s){
                         return s == ' ';
                     });
@@ -57,14 +75,15 @@ LRESULT CALLBACK WindowProc(
                     if (buff2[0] == '\0' || all_space2 || buff[0] == '\0' || all_space){
                         MessageBoxA(hwnd, "Cannot create empty Entries", "U got msg", MB_OK);
                     }
-                    else
+                    else  
                     {
-                        Entry entry = {buff, buff2};
+                        
+                        Entry entry = {id, buff, buff2};
                         V.push_back(entry);
                         SendMessageA(lst, LB_ADDSTRING, 0 , (LPARAM) entry.title.c_str());
                         std::string inf_display = "Current Entries:\n";
                         for (int i = 0; i < V.size(); i++){
-                            inf_display += "* " + V[i].title + "\n" + V[i].description + "\n";
+                            inf_display += "Entry_ID: " + std::to_string(V[i].id) + "; " + V[i].title + "\n" + V[i].description + "\n";
                         };
                         std::string count_display = "Total Entries:\n " + std::to_string(V.size());
                         SetWindowTextA(txt_mass, inf_display.c_str());
@@ -82,7 +101,8 @@ LRESULT CALLBACK WindowProc(
                     MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
                    }
                    else {
-                    SetWindowTextA(txt_mass, V[index].description.c_str()); 
+                    std::string dsp = std::to_string(V[index].id) + ") "+ V[index].description;
+                    SetWindowTextA(txt_mass, dsp.c_str()); 
                    }
                    
                    
@@ -94,6 +114,16 @@ LRESULT CALLBACK WindowProc(
                    }
                    else {
                     SendMessage(lst, LB_DELETESTRING, index , 0);
+                    sqlite3_stmt* stmt = nullptr;
+                    sqlite3_prepare_v2(
+                        db,
+                        "DELETE FROM Entries WHERE id = ?",
+                        -1,
+                        &stmt,
+                        nullptr
+                    );  
+                    sqlite3_bind_int(stmt, 1, V[index].id);
+                    int rc = sqlite3_step(stmt);
                     V.erase(V.begin() + index);
                     SetWindowTextA(txt,std::to_string(V.size()).c_str());
                     std::string inf_display = "Current Entries:\n";
@@ -152,8 +182,7 @@ int WINAPI WinMain(
     LPSTR,
     int nCmdShow
 ) {
-    sqlite3* db;
-    const char CLASS_NAME[] = "MyTrackerWindow";
+     const char CLASS_NAME[] = "MyTrackerWindow";
     int callback(void*, int, char**, char**);
     
     WNDCLASSA wc{};
@@ -187,7 +216,7 @@ int WINAPI WinMain(
         10,
         400,
         100,
-        100,
+        100, 
         hwnd,
         (HMENU)BUTTON_ID,
         hInstance,
@@ -324,7 +353,7 @@ int WINAPI WinMain(
         std::string s = sqlite3_errmsg(db);
         MessageBoxA(hwnd, s.c_str(), "U got msg", MB_OK);
     }
-    char *sql = "CREATE TABLE IF NOT EXISTS Entries(id INTEGER PRIMARY KEY, title TEXT, description TEXT); SELECT * FROM Entries; INSERT INTO Entries (title, description) VALUES ('Test', 'Hello from SQLite');";
+    char *sql = "CREATE TABLE IF NOT EXISTS Entries(id INTEGER PRIMARY KEY, title TEXT, description TEXT); SELECT * FROM Entries;";
     rc = sqlite3_exec(db, sql , callback, &V, 0);
     
     if (rc != SQLITE_OK){
