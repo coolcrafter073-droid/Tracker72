@@ -236,6 +236,32 @@ LRESULT CALLBACK WindowProc(
                         SetWindowTextA(txt_mass, inf_display.c_str());
                      }
                 }
+                if(LOWORD(wParam) == BUTTON_ID_EXPORT){
+                   log("export btn pressed");
+                   sqlite3_stmt* stmt = nullptr;
+                   int rc = sqlite3_prepare_v2(
+                        db,
+                        "SELECT * FROM Entries",
+                        -1,
+                        &stmt,
+                        nullptr
+                    );
+                    std::ofstream f;
+                    f.open("notes.txt", std::ios::out);
+                    check(rc);
+                    while((rc = sqlite3_step(stmt)) == SQLITE_ROW){
+                       check(rc);
+                       const char* title = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+                       const char* desc = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+                       f << "ENTRYYYYY   "<< title << " " << desc << "\n";
+                       
+                       check(rc);
+                    }
+                    f.close();    
+                    rc = sqlite3_finalize(stmt);
+                    check(rc);
+                   
+                }
             }
     }
 
