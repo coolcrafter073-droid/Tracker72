@@ -12,6 +12,7 @@ const int BUTTON_ID_DELETE = 3;
 const int BUTTON_ID_EDIT = 4;
 const int BUTTON_ID_SAVE = 5; 
 const int BUTTON_ID_EXPORT = 6;
+const int BUTTON_ID_IMPORT = 7;
 sqlite3* db;
 HWND txt;
 HWND edt;
@@ -54,6 +55,21 @@ void check(int rc){
     }
     
 }
+
+void LayoutControls(int width, int height){
+    HDWP mv = BeginDeferWindowPos(5);
+    if (mv) mv = DeferWindowPos(mv,txt_mass, nullptr ,  450,350 , width - 450 - 20, height - 350 -20, SWP_NOZORDER | SWP_NOACTIVATE );
+    if (mv) mv = DeferWindowPos(mv,edt,nullptr,  450, 10 , width - 450 - 20, 50, SWP_NOZORDER | SWP_NOACTIVATE );
+    if (mv) mv = DeferWindowPos(mv,edt_sec, nullptr , 450, 100 , width - 450 - 20, 200, SWP_NOZORDER | SWP_NOACTIVATE );
+    if (mv) mv = DeferWindowPos(mv,lst, nullptr , 170, 100, 200, height - 260, SWP_NOZORDER | SWP_NOACTIVATE );
+    if (mv) mv = DeferWindowPos(mv,txt, nullptr , 170, height - 140, 200, 120, SWP_NOZORDER | SWP_NOACTIVATE );
+    if (mv && !EndDeferWindowPos(mv)) {
+        int error = GetLastError();
+        log(error);
+    }
+    InvalidateRect(txt_mass, nullptr, true);
+    UpdateWindow(txt_mass);
+}
 int callback(void* data, int argc, char** argv, char** azColName){
         std::vector<Entry>* vec = static_cast<std::vector<Entry>*>(data);
         std::string s = "";
@@ -67,6 +83,9 @@ int callback(void* data, int argc, char** argv, char** azColName){
         }   
         return 0;
     }
+void CreateControls(){
+    
+}
 LRESULT CALLBACK WindowProc(
     HWND hwnd,
     UINT uMsg,
@@ -77,8 +96,11 @@ LRESULT CALLBACK WindowProc(
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
+        case WM_CREATE:
+            
+            break;
         case WM_COMMAND:
-            if (HIWORD(wParam) == BN_CLICKED){
+            if (HIWORD(wParam) == BN_CLICKED){ 
                 if(LOWORD(wParam) == BUTTON_ID){
                     log("add btn pressed");
                     char buff[1024] = {};
@@ -97,7 +119,7 @@ LRESULT CALLBACK WindowProc(
                     check(rc);
                     rc = sqlite3_bind_text(stmt, 1, buff, -1 , SQLITE_TRANSIENT );
                     check(rc);
-                    rc = sqlite3_bind_text(stmt, 2, buff, -1 , SQLITE_TRANSIENT );
+                    rc = sqlite3_bind_text(stmt, 2, buff2, -1 , SQLITE_TRANSIENT );
                     check(rc);
                     rc = sqlite3_step(stmt);
                     check(rc);
@@ -130,7 +152,6 @@ LRESULT CALLBACK WindowProc(
                         SetWindowTextA(edt, "");
                         SetWindowTextA(edt_sec, "");
                         SetWindowTextA(txt,count_display.c_str());
-                        std::cout << count_display;
                     };
                     
 
@@ -253,7 +274,7 @@ LRESULT CALLBACK WindowProc(
                        check(rc);
                        const char* title = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
                        const char* desc = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
-                       f << "ENTRYYYYY   "<< title << " " << desc << "\n";
+                       f << "Title: "<< title << "\n"<< "Description: " << desc << "\n" << "---------------" << "\n";
                        
                        check(rc);
                     }
@@ -262,7 +283,71 @@ LRESULT CALLBACK WindowProc(
                     check(rc);
                    
                 }
+                if(LOWORD(wParam) == BUTTON_ID_IMPORT){
+                   log("import btn pressed");
+                    std::ifstream f;
+                    f.open("notes.txt");
+                    std::string line = "";
+                    std::string title = "";
+                    std::string description = "";
+                    int id;
+                    while(std::getline(f, line)){
+                        
+                        if (line.find("Title: ") != std::string::npos){
+                            title = line.substr(7);
+                            log(title);
+                        }
+                        if (line.find("Description: ") != std::string::npos){
+                            description = line.substr(13);
+                            log(description);
+                        }
+                        if (line.find("---------------") != std::string::npos){
+                             sqlite3_stmt* stmt = nullptr;
+                            int rc = sqlite3_prepare_v2(
+                                db,
+                                "INSERT INTO Entries (title, description) VALUES (?,?);",
+                                -1,
+                                &stmt,
+                                nullptr
+                            ); 
+                            check(rc);
+                            rc = sqlite3_bind_text(stmt, 1, title.c_str(), -1 , SQLITE_TRANSIENT );
+                            check(rc);
+                            rc = sqlite3_bind_text(stmt, 2, description.c_str(), -1 , SQLITE_TRANSIENT );
+                            check(rc);
+                            rc = sqlite3_step(stmt);
+                            check(rc);
+                            rc = sqlite3_finalize(stmt);
+                            check(rc);
+                            id = sqlite3_last_insert_rowid(db);
+                            Entry entry = {id, title, description};
+                            V.push_back(entry);
+                            SendMessageA(lst, LB_ADDSTRING, 0 , (LPARAM) entry.title.c_str());
+                            std::string inf_display = "Current Entries:\n";
+                            for (int i = 0; i < V.size(); i++){
+                                inf_display += "Entry_ID: " + std::to_string(V[i].id) + "; " + V[i].title + "\n" + V[i].description + "\n";
+                            };
+                            std::string count_display = "Total Entries:\n " + std::to_string(V.size());
+                            SetWindowTextA(txt_mass, inf_display.c_str()); 
+                            SetWindowTextA(txt,count_display.c_str());
+                            std::string title = "";
+                            std::string description = "";
+                            log("skip");
+                        }
+
+                    }
+                }
             }
+            break;
+        case WM_SIZE:
+        {
+            int width = LOWORD(lParam);
+            int height = HIWORD(lParam);
+            LayoutControls(width, height);
+            break;
+        }
+          
+
     }
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -284,6 +369,7 @@ int WINAPI WinMain(
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = hInstance;
     wc.lpszClassName = CLASS_NAME;
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 
     RegisterClassA(&wc);
 
@@ -291,7 +377,7 @@ int WINAPI WinMain(
         0,
         CLASS_NAME,
         "I am still alive",
-        WS_OVERLAPPEDWINDOW,
+        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN ,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
         1000,
@@ -387,6 +473,20 @@ int WINAPI WinMain(
         hInstance,
         nullptr  
     );
+    HWND impbtn = CreateWindowExA(
+        0,
+        "BUTTON",
+        "import",
+        WS_CHILD | WS_VISIBLE,
+        10,
+        600,
+        100,
+        100,
+        hwnd,
+        (HMENU)BUTTON_ID_IMPORT,
+        hInstance,
+        nullptr  
+    );
     txt = CreateWindowExA(
         0,
         "STATIC",
@@ -405,7 +505,7 @@ int WINAPI WinMain(
         0,
         "STATIC",
         "Write something",
-        WS_CHILD | WS_VISIBLE,  
+        WS_CHILD | WS_VISIBLE ,  
         450,
         350,
         300,
@@ -437,7 +537,7 @@ int WINAPI WinMain(
         450,
         100,
         300,
-        150,
+        200,
         hwnd,
         nullptr,
         hInstance,
