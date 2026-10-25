@@ -83,312 +83,7 @@ int callback(void* data, int argc, char** argv, char** azColName){
         }   
         return 0;
     }
-void CreateControls(){
-    
-}
-LRESULT CALLBACK WindowProc(
-    HWND hwnd,
-    UINT uMsg,
-    WPARAM wParam,
-    LPARAM lParam
-) {
-    switch (uMsg) {
-        case WM_DESTROY:
-            PostQuitMessage(0);
-            return 0;
-        case WM_CREATE:
-            
-            break;
-        case WM_COMMAND:
-            if (HIWORD(wParam) == BN_CLICKED){ 
-                if(LOWORD(wParam) == BUTTON_ID){
-                    log("add btn pressed");
-                    char buff[1024] = {};
-                    GetWindowTextA(edt , buff ,1024);
-                    char buff2[1024] = {};
-                    GetWindowTextA(edt_sec , buff2 ,1024);
-                    sqlite3_stmt* stmt = nullptr;
-                    int id = 0;
-                    int rc = sqlite3_prepare_v2(
-                        db,
-                        "INSERT INTO Entries (title, description) VALUES (?,?);",
-                        -1,
-                        &stmt,
-                        nullptr
-                    ); 
-                    check(rc);
-                    rc = sqlite3_bind_text(stmt, 1, buff, -1 , SQLITE_TRANSIENT );
-                    check(rc);
-                    rc = sqlite3_bind_text(stmt, 2, buff2, -1 , SQLITE_TRANSIENT );
-                    check(rc);
-                    rc = sqlite3_step(stmt);
-                    check(rc);
-                    if (rc == SQLITE_DONE){
-                        id = sqlite3_last_insert_rowid(db);
-                    }
-                    rc = sqlite3_finalize(stmt);
-                    check(rc);
-                    bool all_space = std::all_of(buff, buff + std::strlen(buff), [](char s){
-                        return s == ' ';
-                    });
-                    bool all_space2 = std::all_of(buff2, buff2 + std::strlen(buff2), [](char s){
-                        return s == ' ';
-                    });
-                    if (buff2[0] == '\0' || all_space2 || buff[0] == '\0' || all_space){
-                        MessageBoxA(hwnd, "Cannot create empty Entries", "U got msg", MB_OK);
-                    }
-                    else  
-                    {
-                        
-                        Entry entry = {id, buff, buff2};
-                        V.push_back(entry);
-                        SendMessageA(lst, LB_ADDSTRING, 0 , (LPARAM) entry.title.c_str());
-                        std::string inf_display = "Current Entries:\n";
-                        for (int i = 0; i < V.size(); i++){
-                            inf_display += "Entry_ID: " + std::to_string(V[i].id) + "; " + V[i].title + "\n" + V[i].description + "\n";
-                        };
-                        std::string count_display = "Total Entries:\n " + std::to_string(V.size());
-                        SetWindowTextA(txt_mass, inf_display.c_str());
-                        SetWindowTextA(edt, "");
-                        SetWindowTextA(edt_sec, "");
-                        SetWindowTextA(txt,count_display.c_str());
-                    };
-                    
-
-                }
-                if(LOWORD(wParam) == BUTTON_ID_SHOW){
-                   log("show btn pressed"); 
-                   int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
-                   if (index == LB_ERR){
-                    MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
-                   }
-                   else {
-                    std::string dsp = std::to_string(V[index].id) + ") "+ V[index].description;
-                    SetWindowTextA(txt_mass, dsp.c_str()); 
-                   }
-                   
-                   
-                }
-                if(LOWORD(wParam) == BUTTON_ID_DELETE){
-                   log("del btn pressed");
-                   int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
-                   if (index == LB_ERR){
-                    MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
-                   }
-                   else {
-                    SendMessage(lst, LB_DELETESTRING, index , 0);
-                    sqlite3_stmt* stmt = nullptr;
-                    int rc = sqlite3_prepare_v2(
-                        db,
-                        "DELETE FROM Entries WHERE id = ?",
-                        -1,
-                        &stmt,
-                        nullptr
-                    );
-                    check(rc);  
-                    rc = sqlite3_bind_int(stmt, 1, V[index].id);
-                    check(rc);
-                    rc = sqlite3_step(stmt);
-                    check(rc);
-                    rc = sqlite3_finalize(stmt);
-                    check(rc);
-                    V.erase(V.begin() + index);
-                    SetWindowTextA(txt,std::to_string(V.size()).c_str());
-                    std::string inf_display = "Current Entries:\n";
-                        for (int i = 0; i < V.size(); i++){
-                            inf_display += "* " + V[i].title + "\n" + V[i].description + "\n";
-                        };
-                        SetWindowTextA(txt_mass, inf_display.c_str());
-                   }
-                   
-                   
-                }
-                if(LOWORD(wParam) == BUTTON_ID_EDIT){
-                   log("edt btn pressed");
-                   int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
-                   if (index == LB_ERR){
-                    MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
-                   }
-                   else {
-                    SetWindowTextA(edt_sec, V[index].description.c_str()); 
-                    SetWindowTextA(edt, V[index].title.c_str()); 
-                   }
-                   
-                   
-                }
-                if(LOWORD(wParam) == BUTTON_ID_SAVE){
-                   log("save btn pressed");
-                   int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
-                   if (index == LB_ERR){
-                    MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
-                   }
-                   else {
-                        SendMessage(lst, LB_DELETESTRING, index, 0);
-                        char new_title[1024] = {};
-                        char new_description[1024] = {};
-                        GetWindowTextA(edt_sec , new_description ,1024);
-                        GetWindowTextA(edt , new_title ,1024);
-                        V[index].title = new_title;
-                        V[index].description = new_description;
-                        sqlite3_stmt* stmt = nullptr;
-                        int rc = sqlite3_prepare_v2(
-                            db,
-                            "UPDATE Entries SET title = ? , description = ? WHERE id = ?",
-                            -1,
-                            &stmt,
-                            nullptr
-                        );
-                        check(rc);  
-                        rc = sqlite3_bind_text(stmt, 1, new_title, -1 , SQLITE_TRANSIENT );
-                        check(rc);
-                        rc = sqlite3_bind_text(stmt, 2, new_description, -1 , SQLITE_TRANSIENT );
-                        check(rc);
-                        rc = sqlite3_bind_int(stmt, 3, V[index].id);
-                        check(rc);
-                        rc = sqlite3_step(stmt);
-                        check(rc);
-                        rc = sqlite3_finalize(stmt);
-                        check(rc);
-                        SendMessageA(lst, LB_INSERTSTRING, index , (LPARAM) V[index].title.c_str());
-                        std::string inf_display = "Current Entries:\n";
-                        for (int i = 0; i < V.size(); i++){
-                            inf_display += "* " + V[i].title + "\n" + V[i].description + "\n";
-                        };
-                        SetWindowTextA(txt_mass, inf_display.c_str());
-                     }
-                }
-                if(LOWORD(wParam) == BUTTON_ID_EXPORT){
-                   log("export btn pressed");
-                   sqlite3_stmt* stmt = nullptr;
-                   int rc = sqlite3_prepare_v2(
-                        db,
-                        "SELECT * FROM Entries",
-                        -1,
-                        &stmt,
-                        nullptr
-                    );
-                    std::ofstream f;
-                    f.open("notes.txt", std::ios::out);
-                    check(rc);
-                    while((rc = sqlite3_step(stmt)) == SQLITE_ROW){
-                       check(rc);
-                       const char* title = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-                       const char* desc = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
-                       f << "Title: "<< title << "\n"<< "Description: " << desc << "\n" << "---------------" << "\n";
-                       
-                       check(rc);
-                    }
-                    f.close();    
-                    rc = sqlite3_finalize(stmt);
-                    check(rc);
-                   
-                }
-                if(LOWORD(wParam) == BUTTON_ID_IMPORT){
-                   log("import btn pressed");
-                    std::ifstream f;
-                    f.open("notes.txt");
-                    std::string line = "";
-                    std::string title = "";
-                    std::string description = "";
-                    int id;
-                    while(std::getline(f, line)){
-                        
-                        if (line.find("Title: ") != std::string::npos){
-                            title = line.substr(7);
-                            log(title);
-                        }
-                        if (line.find("Description: ") != std::string::npos){
-                            description = line.substr(13);
-                            log(description);
-                        }
-                        if (line.find("---------------") != std::string::npos){
-                             sqlite3_stmt* stmt = nullptr;
-                            int rc = sqlite3_prepare_v2(
-                                db,
-                                "INSERT INTO Entries (title, description) VALUES (?,?);",
-                                -1,
-                                &stmt,
-                                nullptr
-                            ); 
-                            check(rc);
-                            rc = sqlite3_bind_text(stmt, 1, title.c_str(), -1 , SQLITE_TRANSIENT );
-                            check(rc);
-                            rc = sqlite3_bind_text(stmt, 2, description.c_str(), -1 , SQLITE_TRANSIENT );
-                            check(rc);
-                            rc = sqlite3_step(stmt);
-                            check(rc);
-                            rc = sqlite3_finalize(stmt);
-                            check(rc);
-                            id = sqlite3_last_insert_rowid(db);
-                            Entry entry = {id, title, description};
-                            V.push_back(entry);
-                            SendMessageA(lst, LB_ADDSTRING, 0 , (LPARAM) entry.title.c_str());
-                            std::string inf_display = "Current Entries:\n";
-                            for (int i = 0; i < V.size(); i++){
-                                inf_display += "Entry_ID: " + std::to_string(V[i].id) + "; " + V[i].title + "\n" + V[i].description + "\n";
-                            };
-                            std::string count_display = "Total Entries:\n " + std::to_string(V.size());
-                            SetWindowTextA(txt_mass, inf_display.c_str()); 
-                            SetWindowTextA(txt,count_display.c_str());
-                            std::string title = "";
-                            std::string description = "";
-                            log("skip");
-                        }
-
-                    }
-                }
-            }
-            break;
-        case WM_SIZE:
-        {
-            int width = LOWORD(lParam);
-            int height = HIWORD(lParam);
-            LayoutControls(width, height);
-            break;
-        }
-          
-
-    }
-
-    return DefWindowProc(hwnd, uMsg, wParam, lParam);
-}
- 
-
-int WINAPI WinMain(
-    
-    HINSTANCE hInstance,
-    HINSTANCE,
-    LPSTR,
-    int nCmdShow
-) {
-    log("Application started: ");
-    const char CLASS_NAME[] = "MyTrackerWindow";
-    int callback(void*, int, char**, char**);
-    
-    WNDCLASSA wc{};
-    wc.lpfnWndProc = WindowProc;
-    wc.hInstance = hInstance;
-    wc.lpszClassName = CLASS_NAME;
-    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-
-    RegisterClassA(&wc);
-
-    hwnd = CreateWindowExA(
-        0,
-        CLASS_NAME,
-        "I am still alive",
-        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN ,
-        CW_USEDEFAULT,
-        CW_USEDEFAULT,
-        1000,
-        800,
-        nullptr,
-        nullptr,
-        hInstance,
-        nullptr
-    );
-
-
+void CreateControls(HWND hwnd, HINSTANCE hInstance){
     HWND button = CreateWindowExA(
         0,
         "BUTTON",
@@ -557,6 +252,323 @@ int WINAPI WinMain(
         hInstance,
         nullptr 
     );
+}
+void HandleAdd(){
+    log("add btn pressed");
+    char buff[1024] = {};
+    GetWindowTextA(edt , buff ,1024);
+    char buff2[1024] = {};
+    GetWindowTextA(edt_sec , buff2 ,1024);
+    sqlite3_stmt* stmt = nullptr;
+    int id = 0;
+    int rc = sqlite3_prepare_v2(
+        db,
+        "INSERT INTO Entries (title, description) VALUES (?,?);",
+        -1,
+        &stmt,
+        nullptr
+    ); 
+    check(rc);
+    rc = sqlite3_bind_text(stmt, 1, buff, -1 , SQLITE_TRANSIENT );
+    check(rc);
+    rc = sqlite3_bind_text(stmt, 2, buff2, -1 , SQLITE_TRANSIENT );
+    check(rc);
+    rc = sqlite3_step(stmt);
+    check(rc);
+    if (rc == SQLITE_DONE){
+        id = sqlite3_last_insert_rowid(db);
+        }
+    rc = sqlite3_finalize(stmt);
+    check(rc);
+    bool all_space = std::all_of(buff, buff + std::strlen(buff), [](char s){
+        return s == ' ';
+    });
+    bool all_space2 = std::all_of(buff2, buff2 + std::strlen(buff2), [](char s){
+        return s == ' ';
+    });
+    if (buff2[0] == '\0' || all_space2 || buff[0] == '\0' || all_space){
+        MessageBoxA(hwnd, "Cannot create empty Entries", "U got msg", MB_OK);
+    }
+    else  
+    {                       
+        Entry entry = {id, buff, buff2};
+        V.push_back(entry);
+        SendMessageA(lst, LB_ADDSTRING, 0 , (LPARAM) entry.title.c_str());
+        std::string inf_display = "Current Entries:\n";
+        for (int i = 0; i < V.size(); i++){
+            inf_display += "Entry_ID: " + std::to_string(V[i].id) + "; " + V[i].title + "\n" + V[i].description + "\n";
+        };
+        std::string count_display = "Total Entries:\n " + std::to_string(V.size());
+        SetWindowTextA(txt_mass, inf_display.c_str());
+        SetWindowTextA(edt, "");
+        SetWindowTextA(edt_sec, "");
+        SetWindowTextA(txt,count_display.c_str());
+    };
+}
+void HandleSave(){
+    log("save btn pressed");
+    int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
+    if (index == LB_ERR){
+    MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
+    }
+    else {
+        SendMessage(lst, LB_DELETESTRING, index, 0);
+        char new_title[1024] = {};
+        char new_description[1024] = {};
+        GetWindowTextA(edt_sec , new_description ,1024);
+        GetWindowTextA(edt , new_title ,1024);
+        V[index].title = new_title;
+        V[index].description = new_description;
+        sqlite3_stmt* stmt = nullptr;
+        int rc = sqlite3_prepare_v2(
+            db,
+            "UPDATE Entries SET title = ? , description = ? WHERE id = ?",
+            -1,
+            &stmt,
+            nullptr
+        );
+        check(rc);  
+        rc = sqlite3_bind_text(stmt, 1, new_title, -1 , SQLITE_TRANSIENT );
+        check(rc);
+        rc = sqlite3_bind_text(stmt, 2, new_description, -1 , SQLITE_TRANSIENT );
+        check(rc);
+        rc = sqlite3_bind_int(stmt, 3, V[index].id);
+        check(rc);
+        rc = sqlite3_step(stmt);
+        check(rc);
+        rc = sqlite3_finalize(stmt);
+        check(rc);
+        SendMessageA(lst, LB_INSERTSTRING, index , (LPARAM) V[index].title.c_str());
+        std::string inf_display = "Current Entries:\n";
+        for (int i = 0; i < V.size(); i++){
+            inf_display += "* " + V[i].title + "\n" + V[i].description + "\n";
+        };
+        SetWindowTextA(txt_mass, inf_display.c_str());
+    }
+}
+void HandleShow(){
+    log("show btn pressed"); 
+    int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
+    if (index == LB_ERR){
+    MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
+    }
+    else {
+    std::string dsp = std::to_string(V[index].id) + ") "+ V[index].description;
+    SetWindowTextA(txt_mass, dsp.c_str()); 
+    }
+}
+void HandleDelete(){
+    log("del btn pressed");
+    int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
+    if (index == LB_ERR){
+    MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
+    }
+    else {
+    SendMessage(lst, LB_DELETESTRING, index , 0);
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(
+        db,
+        "DELETE FROM Entries WHERE id = ?",
+        -1,
+        &stmt,
+        nullptr
+    );
+    check(rc);  
+    rc = sqlite3_bind_int(stmt, 1, V[index].id);
+    check(rc);
+    rc = sqlite3_step(stmt);
+    check(rc);
+    rc = sqlite3_finalize(stmt);
+    check(rc);
+    V.erase(V.begin() + index);
+    SetWindowTextA(txt,std::to_string(V.size()).c_str());
+    std::string inf_display = "Current Entries:\n";
+    for (int i = 0; i < V.size(); i++){
+            inf_display += "* " + V[i].title + "\n" + V[i].description + "\n";
+        };
+        SetWindowTextA(txt_mass, inf_display.c_str());
+    }
+}
+void HandleEdit(){
+    log("edt btn pressed");
+    int index = SendMessage(lst, LB_GETCURSEL, 0 , 0);
+    if (index == LB_ERR){
+    MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
+    }
+    else {
+    SetWindowTextA(edt_sec, V[index].description.c_str()); 
+    SetWindowTextA(edt, V[index].title.c_str()); 
+    }       
+}
+void HandleExport(){
+    log("export btn pressed");
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(
+        db,
+        "SELECT * FROM Entries",
+        -1,  
+        &stmt,
+        nullptr
+    );
+    std::ofstream f("notes.txt", std::ios::out | std::ios::binary);
+    f << "\xEF\xBB\xBF";
+    check(rc);
+    while((rc = sqlite3_step(stmt)) == SQLITE_ROW){
+        check(rc);
+        const char* title = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        const char* desc = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        f << "Title: "<< title << "\n"<< "Description: " << desc << "\n" << "---------------" << "\n";
+        check(rc);
+    }
+    f.close();    
+    rc = sqlite3_finalize(stmt);
+    check(rc);
+}
+void HandleImport(){
+    log("import btn pressed");
+    std::ifstream f;
+    f.open("notes.txt");
+    std::string line = "";
+    std::string title = "";
+    std::string description = "";
+    int id;
+    while(std::getline(f, line)){
+        if (line.find("Title: ") != std::string::npos){
+            title = line.substr(7);
+            log(title);
+        }
+        if (line.find("Description: ") != std::string::npos){
+            description = line.substr(13);
+            log(description);
+        }
+        if (line.find("---------------") != std::string::npos){
+            sqlite3_stmt* stmt = nullptr;
+            int rc = sqlite3_prepare_v2(
+                db,
+                "INSERT INTO Entries (title, description) VALUES (?,?);",
+                -1,
+                &stmt,
+                nullptr
+            ); 
+            check(rc);
+            rc = sqlite3_bind_text(stmt, 1, title.c_str(), -1 , SQLITE_TRANSIENT );
+            check(rc);
+            rc = sqlite3_bind_text(stmt, 2, description.c_str(), -1 , SQLITE_TRANSIENT );
+            check(rc);
+            rc = sqlite3_step(stmt);
+            check(rc);
+            rc = sqlite3_finalize(stmt);
+            check(rc);
+            id = sqlite3_last_insert_rowid(db);
+            Entry entry = {id, title, description};
+            V.push_back(entry);
+            SendMessageA(lst, LB_ADDSTRING, 0 , (LPARAM) entry.title.c_str());
+            std::string inf_display = "Current Entries:\n";
+            for (int i = 0; i < V.size(); i++){
+                inf_display += "Entry_ID: " + std::to_string(V[i].id) + "; " + V[i].title + "\n" + V[i].description + "\n";
+            };
+            std::string count_display = "Total Entries:\n " + std::to_string(V.size());
+            SetWindowTextA(txt_mass, inf_display.c_str()); 
+            SetWindowTextA(txt,count_display.c_str());
+            std::string title = "";
+            std::string description = "";
+            log("skip");
+        }
+
+    }
+}
+LRESULT CALLBACK WindowProc(
+    HWND hwnd,
+    UINT uMsg,
+    WPARAM wParam,
+    LPARAM lParam
+) {
+    switch (uMsg) {
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
+        case WM_CREATE:
+            CreateControls(hwnd, GetModuleHandleA(nullptr));
+            return 0;
+        case WM_COMMAND:
+            if (HIWORD(wParam) == BN_CLICKED){ 
+                if(LOWORD(wParam) == BUTTON_ID){
+                    HandleAdd();
+                }
+                if(LOWORD(wParam) == BUTTON_ID_SHOW){ 
+                    HandleShow();
+                }
+                if(LOWORD(wParam) == BUTTON_ID_DELETE){
+                    HandleDelete(); 
+                }
+                if(LOWORD(wParam) == BUTTON_ID_EDIT){
+                    HandleEdit();
+                }
+                if(LOWORD(wParam) == BUTTON_ID_SAVE){
+                   HandleSave();
+                }
+                if(LOWORD(wParam) == BUTTON_ID_EXPORT){
+                   HandleExport();
+                }
+                if(LOWORD(wParam) == BUTTON_ID_IMPORT){
+                   HandleImport();
+                }
+            }
+            break;
+        case WM_SIZE:
+        {
+            int width = LOWORD(lParam);
+            int height = HIWORD(lParam);
+            LayoutControls(width, height);
+            break;
+        }
+          
+
+    }
+
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+ 
+
+int WINAPI WinMain(
+    
+    HINSTANCE hInstance,
+    HINSTANCE,
+    LPSTR,
+    int nCmdShow
+) {
+    log("Application started: ");
+    const char CLASS_NAME[] = "MyTrackerWindow";
+    int callback(void*, int, char**, char**);
+    
+    WNDCLASSA wc{};
+    wc.lpfnWndProc = WindowProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = CLASS_NAME;
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+
+    RegisterClassA(&wc);
+
+    hwnd = CreateWindowExA(
+        0,
+        CLASS_NAME,
+        "I am still alive",
+        WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN ,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        1000,
+        800,
+        nullptr,
+        nullptr,
+        hInstance,
+        nullptr
+    );
+
+    if (hwnd == nullptr) {
+        MessageBoxA(hwnd, "FUCK", "U got msg", MB_OK);
+        return 0;
+    }
+
     int rc = sqlite3_open("tracker.db", &db);
     if (rc != SQLITE_OK){
         std::string s = sqlite3_errmsg(db);
@@ -574,10 +586,7 @@ int WINAPI WinMain(
         SendMessageA(lst, LB_ADDSTRING, 0 , (LPARAM) V[i].title.c_str()); 
     };
         
-    if (hwnd == nullptr) {
-        return 0;
-    }
-
+    
     ShowWindow(hwnd, nCmdShow);
 
     MSG msg{};
