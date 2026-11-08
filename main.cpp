@@ -253,12 +253,29 @@ void CreateControls(HWND hwnd, HINSTANCE hInstance){
         nullptr 
     );
 }
+Entry GetEntryInput(){
+    Entry entry{};
+    entry.id = 0;
+    char new_title[1024] = {};
+    char new_description[1024] = {};
+    GetWindowTextA(edt_sec , new_description ,1024);
+    GetWindowTextA(edt , new_title ,1024);
+    entry.title = new_title;
+    entry.description = new_description;
+    return entry;
+}
+void RefreshEntriesView(){
+        std::string inf_display = "Current Entries:\n";
+        for (int i = 0; i < V.size(); i++){
+            inf_display += "Entry_ID: " + std::to_string(V[i].id) + "; " + V[i].title + "\n" + V[i].description + "\n";
+        };
+        std::string count_display = "Total Entries:\n " + std::to_string(V.size());
+        SetWindowTextA(txt_mass, inf_display.c_str());
+        SetWindowTextA(txt,count_display.c_str());
+}    
 void HandleAdd(){
     log("add btn pressed");
-    char buff[1024] = {};
-    GetWindowTextA(edt , buff ,1024);
-    char buff2[1024] = {};
-    GetWindowTextA(edt_sec , buff2 ,1024);
+    Entry input = GetEntryInput();
     sqlite3_stmt* stmt = nullptr;
     int id = 0;
     int rc = sqlite3_prepare_v2(
@@ -269,9 +286,9 @@ void HandleAdd(){
         nullptr
     ); 
     check(rc);
-    rc = sqlite3_bind_text(stmt, 1, buff, -1 , SQLITE_TRANSIENT );
+    rc = sqlite3_bind_text(stmt, 1, input.title.c_str(), -1 , SQLITE_TRANSIENT );
     check(rc);
-    rc = sqlite3_bind_text(stmt, 2, buff2, -1 , SQLITE_TRANSIENT );
+    rc = sqlite3_bind_text(stmt, 2, input.description.c_str(), -1 , SQLITE_TRANSIENT );
     check(rc);
     rc = sqlite3_step(stmt);
     check(rc);
@@ -280,29 +297,23 @@ void HandleAdd(){
         }
     rc = sqlite3_finalize(stmt);
     check(rc);
-    bool all_space = std::all_of(buff, buff + std::strlen(buff), [](char s){
+    bool all_space = std::all_of(input.title.c_str(), input.title.c_str() + std::strlen(input.title.c_str()), [](char s){
         return s == ' ';
     });
-    bool all_space2 = std::all_of(buff2, buff2 + std::strlen(buff2), [](char s){
+    bool all_space2 = std::all_of(input.description.c_str(), input.description.c_str() + std::strlen(input.description.c_str()), [](char s){
         return s == ' ';
     });
-    if (buff2[0] == '\0' || all_space2 || buff[0] == '\0' || all_space){
+    if (input.description.c_str()[0] == '\0' || all_space2 || input.title.c_str()[0] == '\0' || all_space){
         MessageBoxA(hwnd, "Cannot create empty Entries", "U got msg", MB_OK);
     }
     else  
     {                       
-        Entry entry = {id, buff, buff2};
+        Entry entry = {id, input.title.c_str(), input.description.c_str()};
         V.push_back(entry);
         SendMessageA(lst, LB_ADDSTRING, 0 , (LPARAM) entry.title.c_str());
-        std::string inf_display = "Current Entries:\n";
-        for (int i = 0; i < V.size(); i++){
-            inf_display += "Entry_ID: " + std::to_string(V[i].id) + "; " + V[i].title + "\n" + V[i].description + "\n";
-        };
-        std::string count_display = "Total Entries:\n " + std::to_string(V.size());
-        SetWindowTextA(txt_mass, inf_display.c_str());
+        RefreshEntriesView();
         SetWindowTextA(edt, "");
         SetWindowTextA(edt_sec, "");
-        SetWindowTextA(txt,count_display.c_str());
     };
 }
 void HandleSave(){
@@ -313,12 +324,9 @@ void HandleSave(){
     }
     else {
         SendMessage(lst, LB_DELETESTRING, index, 0);
-        char new_title[1024] = {};
-        char new_description[1024] = {};
-        GetWindowTextA(edt_sec , new_description ,1024);
-        GetWindowTextA(edt , new_title ,1024);
-        V[index].title = new_title;
-        V[index].description = new_description;
+        Entry input = GetEntryInput();
+        V[index].title = input.title;
+        V[index].description = input.description;
         sqlite3_stmt* stmt = nullptr;
         int rc = sqlite3_prepare_v2(
             db,
@@ -328,9 +336,9 @@ void HandleSave(){
             nullptr
         );
         check(rc);  
-        rc = sqlite3_bind_text(stmt, 1, new_title, -1 , SQLITE_TRANSIENT );
+        rc = sqlite3_bind_text(stmt, 1, input.title.c_str(), -1 , SQLITE_TRANSIENT );
         check(rc);
-        rc = sqlite3_bind_text(stmt, 2, new_description, -1 , SQLITE_TRANSIENT );
+        rc = sqlite3_bind_text(stmt, 2, input.description.c_str(), -1 , SQLITE_TRANSIENT );
         check(rc);
         rc = sqlite3_bind_int(stmt, 3, V[index].id);
         check(rc);
@@ -339,11 +347,7 @@ void HandleSave(){
         rc = sqlite3_finalize(stmt);
         check(rc);
         SendMessageA(lst, LB_INSERTSTRING, index , (LPARAM) V[index].title.c_str());
-        std::string inf_display = "Current Entries:\n";
-        for (int i = 0; i < V.size(); i++){
-            inf_display += "* " + V[i].title + "\n" + V[i].description + "\n";
-        };
-        SetWindowTextA(txt_mass, inf_display.c_str());
+        RefreshEntriesView();
     }
 }
 void HandleShow(){
@@ -353,8 +357,7 @@ void HandleShow(){
     MessageBoxA(hwnd, "Maaaan , pls select an Entry_title", "U got msg", MB_OK);
     }
     else {
-    std::string dsp = std::to_string(V[index].id) + ") "+ V[index].description;
-    SetWindowTextA(txt_mass, dsp.c_str()); 
+    SetWindowTextA(txt_mass, V[index].description.c_str());
     }
 }
 void HandleDelete(){
@@ -383,10 +386,7 @@ void HandleDelete(){
     V.erase(V.begin() + index);
     SetWindowTextA(txt,std::to_string(V.size()).c_str());
     std::string inf_display = "Current Entries:\n";
-    for (int i = 0; i < V.size(); i++){
-            inf_display += "* " + V[i].title + "\n" + V[i].description + "\n";
-        };
-        SetWindowTextA(txt_mass, inf_display.c_str());
+    RefreshEntriesView();
     }
 }
 void HandleEdit(){
@@ -463,13 +463,7 @@ void HandleImport(){
             Entry entry = {id, title, description};
             V.push_back(entry);
             SendMessageA(lst, LB_ADDSTRING, 0 , (LPARAM) entry.title.c_str());
-            std::string inf_display = "Current Entries:\n";
-            for (int i = 0; i < V.size(); i++){
-                inf_display += "Entry_ID: " + std::to_string(V[i].id) + "; " + V[i].title + "\n" + V[i].description + "\n";
-            };
-            std::string count_display = "Total Entries:\n " + std::to_string(V.size());
-            SetWindowTextA(txt_mass, inf_display.c_str()); 
-            SetWindowTextA(txt,count_display.c_str());
+            RefreshEntriesView();
             std::string title = "";
             std::string description = "";
             log("skip");
@@ -598,4 +592,4 @@ int WINAPI WinMain(
     sqlite3_close(db);
     log("application closed");
     return 0;
-}
+} 
