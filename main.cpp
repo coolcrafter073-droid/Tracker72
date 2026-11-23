@@ -5,6 +5,8 @@
 #include <iostream>
 #include <fstream>
 #include <ctime>
+#include <nlohmann/json.hpp>
+#include <cpr/cpr.h>
 #include "sqlite3.h"
 const int BUTTON_ID = 1;
 const int BUTTON_ID_SHOW = 2;
@@ -83,6 +85,11 @@ int callback(void* data, int argc, char** argv, char** azColName){
         }   
         return 0;
     }
+cpr::Response FetchGithubIssues(){
+    return cpr::Get(
+        cpr::Url{"https://api.github.com/repos/microsoft/vscode/issues"}
+    );
+}
 void CreateControls(HWND hwnd, HINSTANCE hInstance){
     HWND button = CreateWindowExA(
         0,
@@ -579,8 +586,15 @@ int WINAPI WinMain(
     for (int i = 0; i < V.size(); i++){
         SendMessageA(lst, LB_ADDSTRING, 0 , (LPARAM) V[i].title.c_str()); 
     };
-        
-    
+          
+    auto r = FetchGithubIssues();
+    using json = nlohmann::json;
+    json issues = json::parse(r.text);
+    for (const auto& issue : issues){
+        std::string title = issue.at("title").get<std::string>();
+        log(title);
+    }
+    log(std::to_string(r.status_code));
     ShowWindow(hwnd, nCmdShow);
 
     MSG msg{};
